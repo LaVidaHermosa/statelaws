@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State Alcohol Promotion Laws Lookup (Simplified)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        .loader {
+            border: 5px solid #f3f3f3; /* Light grey */
+            border-top: 5px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-card {
+            background-color: white;
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 1.5rem; /* p-6 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            margin-bottom: 1rem; /* mb-4 */
+        }
+        .info-card h3 {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            color: #1f2937; /* text-gray-800 */
+            margin-bottom: 0.75rem; /* mb-3 */
+            border-bottom: 1px solid #e5e7eb; /* border-gray-200 */
+            padding-bottom: 0.5rem; /* pb-2 */
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem; /* gap-4 */
+        }
+        .info-item {
+            background-color: #f9fafb; /* bg-gray-50 */
+            padding: 0.75rem; /* p-3 */
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .info-item strong {
+            display: block;
+            font-weight: 500; /* font-medium */
+            color: #374151; /* text-gray-700 */
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+        .info-item span {
+            color: #4b5563; /* text-gray-600 */
+        }
+        #resultsContainer::-webkit-scrollbar { width: 8px; }
+        #resultsContainer::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #resultsContainer::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        #resultsContainer::-webkit-scrollbar-thumb:hover { background: #555; }
+        select {
+            appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236B7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat; background-position: right 0.7em top 50%, 0 0; background-size: 0.65em auto, 100%;
+            padding-right: 2.5rem; 
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="container mx-auto max-w-5xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Alcohol Promotion Laws Lookup</h1>
+            <p class="text-gray-600 mt-2">Select a state to view its alcohol promotion laws and guidelines.</p>
+        </header>
+
+        <div id="controls" class="mb-6 bg-white p-6 rounded-lg shadow-md">
+            <label for="stateSelect" class="block text-sm font-medium text-gray-700 mb-2">Select State:</label>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <select id="stateSelect" class="block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base">
+                    <option value="">-- Loading States --</option>
+                </select>
+                <button id="clearButton" class="px-4 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 whitespace-nowrap">
+                    Clear Selection
+                </button>
+            </div>
+             <div id="loadingMessage" class="mt-4 text-center hidden">
+                <div class="loader"></div>
+                <p class="text-gray-600">Loading data...</p>
+            </div>
+            <div id="errorMessage" class="mt-4 text-center text-red-600 hidden"></div>
+        </div>
+
+        <div id="resultsContainer" class="max-h-[70vh] overflow-y-auto pr-2">
+             <div id="noSelectionMessage" class="text-center text-gray-500 py-10">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No State Selected</h3>
+                <p class="mt-1 text-sm text-gray-500">Please select a state from the dropdown above to see the details.</p>
+            </div>
+        </div>
+         <div id="summaryContainer" class="mt-8">
+            <!-- Executive Summary will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        // --- IMPORTANT ---
+        // These file paths now point to SIMPLIFIED filenames.
+        // Make sure you have RENAMED your actual CSV files to 'laws.csv' and 'summary.csv'
+        // and that they are in the SAME FOLDER as this HTML file.
+        const csvFilePath = './laws.csv';
+        const summaryCsvFilePath = './summary.csv';
+
+        const stateSelect = document.getElementById('stateSelect');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const clearButton = document.getElementById('clearButton');
+        const noSelectionMessage = document.getElementById('noSelectionMessage');
+        const summaryContainer = document.getElementById('summaryContainer');
+
+        let lawsData = [];
+        let headers = [];
+        
+        function robustParseCSV(csvText, rowsToSkip) {
+            const lines = csvText.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n').trim().split('\\n');
+            if (lines.length <= rowsToSkip) {
+                throw new Error("CSV file does not have enough lines for headers after skipping.");
+            }
+            const headerLine = lines[rowsToSkip];
+            headers = parseCSVLine(headerLine).map(h => h.trim());
+            const data = [];
+            for (let i = rowsToSkip + 1; i < lines.length; i++) {
+                if (!lines[i] || lines[i].trim() === '') continue;
+                const values = parseCSVLine(lines[i]);
+                const entry = {};
+                if (values.length >= headers.length) { 
+                    headers.forEach((header, index) => {
+                        entry[header] = values[index] ? values[index].trim() : '';
+                    });
+                    if (entry[headers[0]] && entry[headers[0]].trim() !== '' && entry[headers[0]].trim().toUpperCase() !== 'STATE') {
+                        data.push(entry);
+                    }
+                } else if (values.some(val => val.trim() !== '')) { 
+                    // console.warn(`Skipping data line ${i+1} (CSV parsing): Expected ${headers.length} cols, got ${values.length}. Line: "${lines[i]}"`);
+                }
+            }
+            return data;
+        }
+
+        function parseCSVLine(line) {
+            const values = [];
+            let currentVal = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuotes && i + 1 < line.length && line[i+1] === '"') { 
+                        currentVal += '"'; i++; 
+                    } else { inQuotes = !inQuotes; }
+                } else if (char === ',' && !inQuotes) {
+                    values.push(currentVal); currentVal = '';
+                } else { currentVal += char; }
+            }
+            values.push(currentVal); 
+            return values.map(v => v.replace(/^"|"$/g, '').trim()); 
+        }
+
+        async function loadLawsData() {
+            loadingMessage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            noSelectionMessage.classList.add('hidden');
+            stateSelect.disabled = true;
+            stateSelect.innerHTML = '<option value="">-- Loading States --</option>';
+            try {
+                const response = await fetch(csvFilePath); // Uses simplified path
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status} when fetching ${csvFilePath}. Check filename and location.`);
+                }
+                const csvText = await response.text();
+                const estimatedRowsAboveHeader = 2; 
+                lawsData = robustParseCSV(csvText, estimatedRowsAboveHeader);
+                if (lawsData.length === 0 || headers.length === 0) {
+                    throw new Error("No data parsed from laws CSV. Check CSV content, structure, and `estimatedRowsAboveHeader`.");
+                }
+                populateStateDropdown();
+                noSelectionMessage.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error in loadLawsData:', error);
+                errorMessage.textContent = `Failed to load or parse laws data (${csvFilePath}): ${error.message}`;
+                errorMessage.classList.remove('hidden');
+                resultsContainer.innerHTML = ''; 
+            } finally {
+                loadingMessage.classList.add('hidden');
+                stateSelect.disabled = false;
+                if(lawsData.length === 0 && stateSelect.options.length <=1 && !errorMessage.classList.contains('hidden')){ 
+                    stateSelect.innerHTML = '<option value="">-- Error Loading States --</option>';
+                } else if (lawsData.length === 0 && stateSelect.options.length <=1) {
+                     stateSelect.innerHTML = '<option value="">-- No States Found --</option>';
+                }
+            }
+        }
+        
+        async function loadSummaryData() {
+            try {
+                const response = await fetch(summaryCsvFilePath); // Uses simplified path
+                if (!response.ok) {
+                    console.warn(`Could not load summary file (${summaryCsvFilePath}), status: ${response.status}`);
+                    summaryContainer.innerHTML = `<p class="text-sm text-gray-500 text-center">Executive summary not available.</p>`;
+                    return;
+                }
+                const csvText = await response.text();
+                const lines = csvText.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n').trim().split('\\n');
+                let summaryHtml = '<div class="info-card"><h3 class="text-xl font-semibold mb-4">Executive Summary</h3>';
+                const summaryContentStartIndex = 2; 
+                let contentStarted = false;
+                if (lines.length > summaryContentStartIndex) {
+                    for (let i = summaryContentStartIndex; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                         if (line) { 
+                            if (line === line.toUpperCase() || line.endsWith(':')) {
+                                if (contentStarted) summaryHtml += '</p>'; 
+                                summaryHtml += `<h4 class="text-md font-semibold mt-3 mb-1 text-gray-700">${line.replace(/,+$/, '')}</h4><p class="text-gray-600 text-sm leading-relaxed">`;
+                            } else {
+                                if(!contentStarted) summaryHtml += '<p class="text-gray-600 text-sm leading-relaxed">';
+                                summaryHtml += line.replace(/,+$/, '') + ' '; 
+                            }
+                            contentStarted = true;
+                        } else if (contentStarted) {
+                             summaryHtml += '</p><p class="text-gray-600 text-sm leading-relaxed">'; 
+                        }
+                    }
+                    if(contentStarted) summaryHtml += '</p>'; 
+                } else {
+                    summaryHtml += '<p class="text-gray-600 text-sm">Summary content not found or file is too short.</p>';
+                }
+                summaryHtml += '</div>';
+                summaryContainer.innerHTML = summaryHtml;
+            } catch (error) {
+                console.error('Error in loadSummaryData:', error);
+                summaryContainer.innerHTML = `<p class="text-sm text-red-500 text-center">Could not load executive summary (${summaryCsvFilePath}): ${error.message}</p>`;
+            }
+        }
+
+        function populateStateDropdown() {
+            if (!headers[0]) {
+                errorMessage.textContent = "Error: State column header not found in CSV. Check CSV format.";
+                errorMessage.classList.remove('hidden'); // Ensure error is visible
+                stateSelect.innerHTML = '<option value="">-- Error: No States --</option>';
+                return;
+            }
+            const stateColumnName = headers[0]; 
+            const states = [...new Set(lawsData.map(item => item[stateColumnName]).filter(state => state && state.trim() !== ''))].sort();
+            if (states.length === 0) {
+                 errorMessage.textContent = "No states found in the CSV data after parsing.";
+                 errorMessage.classList.remove('hidden');
+                 stateSelect.innerHTML = '<option value="">-- No States Available --</option>';
+                 return;
+            }
+            stateSelect.innerHTML = '<option value="">-- Select a State --</option>'; 
+            states.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                stateSelect.appendChild(option);
+            });
+        }
+
+        function displayStateInfo(selectedState) {
+            resultsContainer.innerHTML = ''; 
+            noSelectionMessage.classList.add('hidden');
+            if (!selectedState) { 
+                noSelectionMessage.classList.remove('hidden'); return;
+            }
+            const stateColumnName = headers[0]; 
+            const stateInfo = lawsData.find(item => item[stateColumnName] === selectedState);
+            if (!stateInfo) {
+                resultsContainer.innerHTML = `<p class="text-center text-red-500">No information found for ${selectedState}.</p>`;
+                return;
+            }
+            let html = `<div class="info-card">`;
+            html += `<h2 class="text-2xl font-bold text-indigo-700 mb-6 text-center">${stateInfo[stateColumnName]} - Promotion Laws</h2>`;
+            const createSection = (title, categoryPrefix, types) => {
+                let sectionHtml = `<div class="mb-6"><h3 class="text-xl font-semibold text-gray-700 mb-3">${title}</h3><div class="info-grid">`;
+                const productCategories = ['BEER', 'WINE', 'SPIRITS'];
+                let contentFound = false;
+                productCategories.forEach(prodCat => {
+                    types.forEach(type => {
+                        const key = type ? `${categoryPrefix} - ${prodCat} (${type})` : `${categoryPrefix} - ${prodCat}`;
+                        const altKey = type ? `${categoryPrefix} - ${prodCat} ${type}` : null; 
+                        let value;
+                        const possibleKeys = [
+                            key, altKey,
+                            `${categoryPrefix.toUpperCase()} - ${prodCat.toUpperCase()}${type ? ` (${type.toUpperCase()})` : ''}`,
+                            `${categoryPrefix.toUpperCase()} - ${prodCat.toUpperCase()}${type ? ` ${type.toUpperCase()}` : ''}`
+                        ].filter(Boolean);
+                        for (const k of possibleKeys) {
+                            if (stateInfo[k] !== undefined) { value = stateInfo[k]; break; }
+                        }
+                        if (value !== undefined && value.trim() !== '') {
+                            contentFound = true;
+                            sectionHtml += `
+                                <div class="info-item">
+                                    <strong>${prodCat}${type ? ` (${type})` : ''}</strong>
+                                    <span>${value || 'N/A'}</span>
+                                </div>`;
+                        }
+                    });
+                });
+                if (!contentFound) {
+                    sectionHtml += `<p class="text-gray-500 col-span-full">No specific data available for ${title.toLowerCase()}.</p>`;
+                }
+                sectionHtml += `</div></div>`;
+                return sectionHtml;
+            };
+            const rebateHeaders = headers.filter(h => h.toUpperCase().startsWith("REBATES - ") && h.includes("("));
+            const rebateTypes = [...new Set(rebateHeaders.map(h => {
+                const match = h.match(/\(([^)]+)\)/); 
+                return match ? match[1] : null;
+            }).filter(Boolean))].sort(); 
+            if (rebateTypes.length > 0) {
+                 html += createSection('Rebates', 'REBATES', rebateTypes);
+            } else { 
+                html += createSection('Rebates', 'REBATES', ['']); 
+            }
+            const sweepstakeProductHeaders = headers.filter(h => h.toUpperCase().startsWith("SWEEPSTAKES - "));
+            if (sweepstakeProductHeaders.length > 0) {
+                 html += createSection('Sweepstakes', 'SWEEPSTAKES', ['']); 
+            } else {
+                 html += `<div class="mb-6"><h3 class="text-xl font-semibold text-gray-700 mb-3">Sweepstakes</h3><p class="text-gray-500">No specific sweepstakes data columns found.</p></div>`;
+            }
+            const citationsKey = headers.find(h => h.toUpperCase() === 'CITATIONS');
+            const notesKey = headers.find(h => h.toUpperCase() === 'NOTES');
+            if (citationsKey && stateInfo[citationsKey] && stateInfo[citationsKey].trim() !== '') {
+                html += `<div class="info-card mt-6"><h3 class="text-lg font-semibold text-gray-700">Citations</h3><p class="text-gray-600 whitespace-pre-wrap">${stateInfo[citationsKey]}</p></div>`;
+            }
+            if (notesKey && stateInfo[notesKey] && stateInfo[notesKey].trim() !== '') {
+                html += `<div class="info-card mt-4"><h3 class="text-lg font-semibold text-gray-700">Notes</h3><p class="text-gray-600 whitespace-pre-wrap">${stateInfo[notesKey]}</p></div>`;
+            }
+            html += `</div>`; 
+            resultsContainer.innerHTML = html;
+        }
+
+        stateSelect.addEventListener('change', (event) => displayStateInfo(event.target.value));
+        clearButton.addEventListener('click', () => {
+            stateSelect.value = ''; resultsContainer.innerHTML = ''; 
+            noSelectionMessage.classList.remove('hidden'); 
+        });
+
+        async function initializeApp() {
+            await loadLawsData(); 
+            await loadSummaryData(); 
+        }
+        initializeApp();
+    </script>
+</body>
+</html>
