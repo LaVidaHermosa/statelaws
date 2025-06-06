@@ -128,12 +128,15 @@
         let headers = [];
         
         function robustParseCSV(csvText, rowsToSkip) {
+            console.log("robustParseCSV called."); // DEBUG
             const lines = csvText.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n').trim().split('\\n');
             if (lines.length <= rowsToSkip) {
+                console.error("CSV file does not have enough lines for headers after skipping."); // DEBUG
                 throw new Error("CSV file does not have enough lines for headers after skipping.");
             }
             const headerLine = lines[rowsToSkip];
             headers = parseCSVLine(headerLine).map(h => h.trim());
+            console.log("Parsed Headers:", headers); // DEBUG
             const data = [];
             for (let i = rowsToSkip + 1; i < lines.length; i++) {
                 if (!lines[i] || lines[i].trim() === '') continue;
@@ -147,9 +150,11 @@
                         data.push(entry);
                     }
                 } else if (values.some(val => val.trim() !== '')) { 
-                    // console.warn(`Skipping data line ${i+1} (CSV parsing): Expected ${headers.length} cols, got ${values.length}. Line: "${lines[i]}"`);
+                     console.warn(`Skipping data line ${i+1} (CSV parsing): Expected ${headers.length} cols, got ${values.length}. Line: "${lines[i]}"`); // DEBUG
                 }
             }
+            console.log(`Parsed ${data.length} data rows.`); // DEBUG
+            if (data.length > 0) console.log("First data row sample:", JSON.stringify(data[0])); // DEBUG
             return data;
         }
 
@@ -178,7 +183,9 @@
             stateSelect.disabled = true;
             stateSelect.innerHTML = '<option value="">-- Loading States --</option>';
             try {
-                const response = await fetch(csvFilePath); // Uses simplified path
+                console.log(`Fetching laws data from: ${csvFilePath}`); // DEBUG
+                const response = await fetch(csvFilePath); 
+                console.log(`Fetch response status for ${csvFilePath}: ${response.status}`); // DEBUG
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status} when fetching ${csvFilePath}. Check filename and location.`);
                 }
@@ -208,7 +215,9 @@
         
         async function loadSummaryData() {
             try {
-                const response = await fetch(summaryCsvFilePath); // Uses simplified path
+                console.log(`Fetching summary data from: ${summaryCsvFilePath}`); // DEBUG
+                const response = await fetch(summaryCsvFilePath); 
+                console.log(`Fetch response status for ${summaryCsvFilePath}: ${response.status}`); // DEBUG
                 if (!response.ok) {
                     console.warn(`Could not load summary file (${summaryCsvFilePath}), status: ${response.status}`);
                     summaryContainer.innerHTML = `<p class="text-sm text-gray-500 text-center">Executive summary not available.</p>`;
@@ -248,18 +257,23 @@
         }
 
         function populateStateDropdown() {
+            console.log("populateStateDropdown called."); // DEBUG
             if (!headers[0]) {
                 errorMessage.textContent = "Error: State column header not found in CSV. Check CSV format.";
-                errorMessage.classList.remove('hidden'); // Ensure error is visible
+                errorMessage.classList.remove('hidden'); 
                 stateSelect.innerHTML = '<option value="">-- Error: No States --</option>';
+                console.error("State column header (headers[0]) not found."); // DEBUG
                 return;
             }
             const stateColumnName = headers[0]; 
+            console.log("Using state column name for dropdown:", stateColumnName); //DEBUG
             const states = [...new Set(lawsData.map(item => item[stateColumnName]).filter(state => state && state.trim() !== ''))].sort();
+            console.log("Populating dropdown with states:", states); // DEBUG
             if (states.length === 0) {
                  errorMessage.textContent = "No states found in the CSV data after parsing.";
                  errorMessage.classList.remove('hidden');
                  stateSelect.innerHTML = '<option value="">-- No States Available --</option>';
+                 console.warn("No states found to populate dropdown."); //DEBUG
                  return;
             }
             stateSelect.innerHTML = '<option value="">-- Select a State --</option>'; 
@@ -272,20 +286,34 @@
         }
 
         function displayStateInfo(selectedState) {
+            console.log("--- displayStateInfo called ---"); // DEBUG
+            console.log("Selected State from dropdown:", selectedState); // DEBUG
             resultsContainer.innerHTML = ''; 
             noSelectionMessage.classList.add('hidden');
             if (!selectedState) { 
-                noSelectionMessage.classList.remove('hidden'); return;
-            }
-            const stateColumnName = headers[0]; 
-            const stateInfo = lawsData.find(item => item[stateColumnName] === selectedState);
-            if (!stateInfo) {
-                resultsContainer.innerHTML = `<p class="text-center text-red-500">No information found for ${selectedState}.</p>`;
+                noSelectionMessage.classList.remove('hidden'); 
+                console.log("No state selected, showing default message."); // DEBUG
                 return;
             }
+            
+            const stateColumnName = headers[0]; 
+            console.log("Using state column header to find data:", stateColumnName); // DEBUG
+            const stateInfo = lawsData.find(item => item[stateColumnName] === selectedState);
+            
+            // Log the entire stateInfo object found to inspect its contents
+            console.log("Found stateInfo for '" + selectedState + "':", JSON.stringify(stateInfo, null, 2)); // DEBUG
+
+            if (!stateInfo) {
+                resultsContainer.innerHTML = `<p class="text-center text-red-500">No information found for ${selectedState}.</p>`;
+                console.warn("No stateInfo found for selected state:", selectedState); // DEBUG
+                return;
+            }
+
             let html = `<div class="info-card">`;
             html += `<h2 class="text-2xl font-bold text-indigo-700 mb-6 text-center">${stateInfo[stateColumnName]} - Promotion Laws</h2>`;
+            
             const createSection = (title, categoryPrefix, types) => {
+                console.log(`Creating section: "${title}" with prefix: "${categoryPrefix}" and types:`, types); // DEBUG
                 let sectionHtml = `<div class="mb-6"><h3 class="text-xl font-semibold text-gray-700 mb-3">${title}</h3><div class="info-grid">`;
                 const productCategories = ['BEER', 'WINE', 'SPIRITS'];
                 let contentFound = false;
@@ -299,8 +327,14 @@
                             `${categoryPrefix.toUpperCase()} - ${prodCat.toUpperCase()}${type ? ` (${type.toUpperCase()})` : ''}`,
                             `${categoryPrefix.toUpperCase()} - ${prodCat.toUpperCase()}${type ? ` ${type.toUpperCase()}` : ''}`
                         ].filter(Boolean);
+                        
+                        // console.log(`  Trying keys for ${prodCat} (${type || 'general'}):`, possibleKeys); // DEBUG
                         for (const k of possibleKeys) {
-                            if (stateInfo[k] !== undefined) { value = stateInfo[k]; break; }
+                            if (stateInfo[k] !== undefined) { 
+                                value = stateInfo[k]; 
+                                // console.log(`    Found value for key "${k}": "${value}"`); // DEBUG
+                                break; 
+                            }
                         }
                         if (value !== undefined && value.trim() !== '') {
                             contentFound = true;
@@ -313,29 +347,40 @@
                     });
                 });
                 if (!contentFound) {
+                    console.log(`  No content found for section: "${title}"`); // DEBUG
                     sectionHtml += `<p class="text-gray-500 col-span-full">No specific data available for ${title.toLowerCase()}.</p>`;
                 }
                 sectionHtml += `</div></div>`;
                 return sectionHtml;
             };
+
             const rebateHeaders = headers.filter(h => h.toUpperCase().startsWith("REBATES - ") && h.includes("("));
             const rebateTypes = [...new Set(rebateHeaders.map(h => {
                 const match = h.match(/\(([^)]+)\)/); 
                 return match ? match[1] : null;
             }).filter(Boolean))].sort(); 
+            console.log("Identified Rebate Types:", rebateTypes); // DEBUG
+
             if (rebateTypes.length > 0) {
                  html += createSection('Rebates', 'REBATES', rebateTypes);
             } else { 
+                console.log("No specific rebate types found, trying general rebates."); // DEBUG
                 html += createSection('Rebates', 'REBATES', ['']); 
             }
+
             const sweepstakeProductHeaders = headers.filter(h => h.toUpperCase().startsWith("SWEEPSTAKES - "));
+            console.log("Identified Sweepstake Headers:", sweepstakeProductHeaders.map(h => h)); //DEBUG
             if (sweepstakeProductHeaders.length > 0) {
                  html += createSection('Sweepstakes', 'SWEEPSTAKES', ['']); 
             } else {
+                console.log("No specific sweepstake product headers found."); // DEBUG
                  html += `<div class="mb-6"><h3 class="text-xl font-semibold text-gray-700 mb-3">Sweepstakes</h3><p class="text-gray-500">No specific sweepstakes data columns found.</p></div>`;
             }
+
             const citationsKey = headers.find(h => h.toUpperCase() === 'CITATIONS');
             const notesKey = headers.find(h => h.toUpperCase() === 'NOTES');
+            console.log("Citations Key found:", citationsKey, "| Notes Key found:", notesKey); // DEBUG
+
             if (citationsKey && stateInfo[citationsKey] && stateInfo[citationsKey].trim() !== '') {
                 html += `<div class="info-card mt-6"><h3 class="text-lg font-semibold text-gray-700">Citations</h3><p class="text-gray-600 whitespace-pre-wrap">${stateInfo[citationsKey]}</p></div>`;
             }
@@ -350,11 +395,14 @@
         clearButton.addEventListener('click', () => {
             stateSelect.value = ''; resultsContainer.innerHTML = ''; 
             noSelectionMessage.classList.remove('hidden'); 
+            console.log("Clear button clicked."); // DEBUG
         });
 
         async function initializeApp() {
+            console.log("Initializing app..."); // DEBUG
             await loadLawsData(); 
             await loadSummaryData(); 
+            console.log("App initialization complete."); // DEBUG
         }
         initializeApp();
     </script>
